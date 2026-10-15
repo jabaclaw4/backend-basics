@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: Library API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /books:
+    get:
+      summary: Получить список книг
+      operationId: listBooks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: list
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: Список не найден
+  /books/{id}:
+    get:
+      summary: Получить книгу по id
+      operationId: bookOnId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: Книга не найдена
+components:
+  schemas:
+    Book: #то что возвращает сервер
+      type: object
+      required: [id, title, author, isbn, total_copies, available_copies]
+      properties:
+        id:
+          type: integer
+          readOnly: tгue
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        published_year:
+          type: integer
+        total_copies:
+          type: integer
+          minimum: 0
+        available_copies:
+          type: integer
+          minimum: 0
+          readOnly: tгue
+    BookCreateRequest: #то что отправляет клиент для post
+      type: object #зн ресурс у которого есть поля
+      required: [title, author, isbn, total_copies]
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        total_copies:
+          type: integer
+    ReaderCreateRequest:
+      type: object
+      required: [full_name, email]
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+    Reader:
+      type: object
+      required: [id, full_name, email, registered_at]
+      properties:
+        id:
+          type: integer
+          readOnly: tгue
+        full_name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        registered_at:
+          type: date-time
+          readOnly: true
+    Loan:
+      type: object
+      required: [ id, book_id, reader_id, loaned_at, due_date ]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        book_id:
+          type: integer
+        reader_id:
+          type: integer
+        loaned_at:
+          type: string
+          format: date-time
+          readOnly: true
+        due_date:
+          type: string
+          format: date-time
+        returned_at:
+          type: [ "string", "null" ]
+          format: date-time
+          readOnly: true
+
+    LoanCreateRequest:
+      type: object
+      required: [ book_id, reader_id, due_date ]
+      properties:
+        book_id:
+          type: integer
+        reader_id:
+          type: integer
+        due_date:
+          type: string
+          format: date-time
+
