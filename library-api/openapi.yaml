@@ -2,38 +2,83 @@ openapi: 3.1.0
 info:
   title: Library API
   version: 1.0.0
+  description: API для управления библиотекой (книги, читатели, выдачи).
 servers:
   - url: https://api.example.com/v1
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Books
+    description: Управление книгами
+  - name: Readers
+    description: Управление читателями
+  - name: Loans
+    description: Выдача и возврат книг
+
 paths:
   /books:
     get:
+      tags: [Books]
       summary: Получить список книг
       operationId: listBooks
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: list
-      responses:
-        "200":
-          description: Успех
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Book"
-        "404":
-          description: Список не найден
-  /books/{id}:
-    get:
-      summary: Получить книгу по id
-      operationId: bookOnId
-      parameters:
-        - name: id
-          in: path
-          required: true
+        - name: limit
+          in: query
           schema:
             type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [Books]
+      summary: Создать книгу
+      operationId: createBook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookCreateRequest"
+      responses:
+        "201":
+          description: Книга создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: Получить книгу по id
+      operationId: getBookById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
       responses:
         "200":
           description: Успех
@@ -42,16 +87,360 @@ paths:
               schema:
                 $ref: "#/components/schemas/Book"
         "404":
-          description: Книга не найдена
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Books]
+      summary: Полностью заменить книгу
+      operationId: replaceBook
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookCreateRequest"
+      responses:
+        "200":
+          description: Книга заменена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    patch:
+      tags: [Books]
+      summary: Частично изменить книгу
+      operationId: updateBook
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookUpdateRequest"
+      responses:
+        "200":
+          description: Книга обновлена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [Books]
+      summary: Удалить книгу
+      operationId: deleteBook
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Книга удалена (нет тела)
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /readers:
+    get:
+      tags: [Readers]
+      summary: Получить список читателей
+      operationId: listReaders
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reader"
+    post:
+      tags: [Readers]
+      summary: Зарегистрировать читателя
+      operationId: createReader
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReaderCreateRequest"
+      responses:
+        "201":
+          description: Читатель создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reader"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /readers/{id}:
+    get:
+      tags: [Readers]
+      summary: Получить читателя по id
+      operationId: getReaderById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reader"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Readers]
+      summary: Заменить данные читателя
+      operationId: replaceReader
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReaderCreateRequest"
+      responses:
+        "200":
+          description: Данные заменены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reader"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Readers]
+      summary: Частично изменить читателя
+      operationId: updateReader
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReaderUpdateRequest"
+      responses:
+        "200":
+          description: Данные обновлены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reader"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Readers]
+      summary: Удалить читателя
+      operationId: deleteReader
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Читатель удален
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /loans:
+    get:
+      tags: [Loans]
+      summary: Получить список выдач
+      operationId: listLoans
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [overdue]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Loan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [Loans]
+      summary: Выдать книгу
+      operationId: createLoan
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanCreateRequest"
+      responses:
+        "201":
+          description: Книга выдана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /loans/{id}:
+    get:
+      tags: [Loans]
+      summary: Получить выдачу по id
+      operationId: getLoanById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /loans/{id}/return:
+    post:
+      tags: [Loans]
+      summary: Вернуть книгу
+      operationId: returnLoan
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Книга возвращена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Конфликт (бизнес-правило нарушено)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Ошибка валидации данных
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
   schemas:
-    Book: #то что возвращает сервер
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - NOT_FOUND
+            - VALIDATION_ERROR
+            - CONFLICT
+            - BUSINESS_RULE_VIOLATION
+            - IDEMPOTENCY_MISMATCH
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+        request_id:
+          type: string
+      examples:
+        - code: VALIDATION_ERROR
+          message: "Некорректные данные запроса"
+          details:
+            - field: title
+              issue: minLength
+        - code: NOT_FOUND
+          message: "Книга не найдена"
+
+    Book:
       type: object
       required: [id, title, author, isbn, total_copies, available_copies]
       properties:
         id:
           type: integer
-          readOnly: tгue
+          readOnly: true
         title:
           type: string
         author:
@@ -66,9 +455,10 @@ components:
         available_copies:
           type: integer
           minimum: 0
-          readOnly: tгue
-    BookCreateRequest: #то что отправляет клиент для post
-      type: object #зн ресурс у которого есть поля
+          readOnly: true
+
+    BookCreateRequest:
+      type: object
       required: [title, author, isbn, total_copies]
       properties:
         title:
@@ -77,8 +467,51 @@ components:
           type: string
         isbn:
           type: string
+        published_year:
+          type: integer
         total_copies:
           type: integer
+          minimum: 0
+      examples:
+        - title: "Война и мир"
+          author: "Лев Толстой"
+          isbn: "978-5-04-116000-0"
+          published_year: 1869
+          total_copies: 5
+
+    BookUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        published_year:
+          type: integer
+        total_copies:
+          type: integer
+          minimum: 0
+
+    Reader:
+      type: object
+      required: [id, full_name, email, registered_at]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        full_name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        registered_at:
+          type: string
+          format: date-time
+          readOnly: true
+
     ReaderCreateRequest:
       type: object
       required: [full_name, email]
@@ -89,25 +522,23 @@ components:
         email:
           type: string
           format: email
-    Reader:
+      examples:
+        - full_name: "Иван Иванов"
+          email: "ivan@example.com"
+
+    ReaderUpdateRequest:
       type: object
-      required: [id, full_name, email, registered_at]
       properties:
-        id:
-          type: integer
-          readOnly: tгue
         full_name:
           type: string
           minLength: 1
         email:
           type: string
           format: email
-        registered_at:
-          type: date-time
-          readOnly: true
+
     Loan:
       type: object
-      required: [ id, book_id, reader_id, loaned_at, due_date ]
+      required: [id, book_id, reader_id, loaned_at, due_date]
       properties:
         id:
           type: integer
@@ -130,7 +561,7 @@ components:
 
     LoanCreateRequest:
       type: object
-      required: [ book_id, reader_id, due_date ]
+      required: [book_id, reader_id, due_date]
       properties:
         book_id:
           type: integer
@@ -139,4 +570,7 @@ components:
         due_date:
           type: string
           format: date-time
-
+      examples:
+        - book_id: 1
+          reader_id: 10
+          due_date: "2026-11-01T12:00:00Z"
